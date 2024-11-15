@@ -1,0 +1,28 @@
+name: "Bug report"
+about: "Report a problem with the project that is caused be unexpected behavior"
+title: "[BUG] "
+ref: "dev"
+labels:
+  - bug
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problems does this bug cause?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: A list of things you have to do to make this bug appear
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Suggested solution
+      description: How would you fix this bug
+    validations:
+      required: false

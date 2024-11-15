@@ -1,0 +1,21 @@
+name: "Feature request"
+about: "Make a new suggestion for a new feature"
+title: "[FEATURE] "
+ref: "dev"
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem needs to be solved or what is the missing feature?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution
+      description: What kind of feature would solve the problem listed above?
+    validations:
+      required: true
