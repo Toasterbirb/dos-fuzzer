@@ -7,7 +7,7 @@ LDFLAGS=
 
 all: $(BIN)
 
-$(BIN): ./src/main.cpp
+$(BIN): ./src/main.cpp ./src/timer.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 %.o: ./src/%.cpp
