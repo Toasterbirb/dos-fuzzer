@@ -9,7 +9,7 @@ Command usage
 ```
 dos_fuzzer [command] [path_to_binary] [section_address] [section_size]
 ```
-The `[command]` is the full command that should be run with the patched file. In the command string the file being fuzzed should be replaced with `%c`. For example `r2 -q %c` would run radare2 on the patched binary.
+The `[command]` is the full command that should be run with the patched file. In the command string the file being fuzzed should be replaced with `%c`. For example `r2 -q %c` would run radare2 on the patched binary. To make the output cleaner, it is recommended to redirect all output of the command to `/dev/null`.
 
 `[path_to_binary]` should be fairly explanatory (it is the file we want to fuzz with)
 
