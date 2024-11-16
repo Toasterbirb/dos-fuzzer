@@ -21,10 +21,18 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	constexpr u8 max_bytes_to_change = 8;
+
 	const std::string command						= argv[1];
 	const std::filesystem::path original_bin_path	= argv[2];
 	const u64 section_address						= std::stoul(argv[3], 0, 16);
 	const u64 section_size							= std::stoul(argv[4], 0, 16);
+
+	if (section_size < max_bytes_to_change)
+	{
+		std::cout << "the minimum section size is " << (u32)max_bytes_to_change << " bytes\n";
+		return 1;
+	}
 
 	const std::filesystem::path patched_bin_path = original_bin_path.string() + patched_postfix;
 
@@ -32,6 +40,19 @@ int main(int argc, char** argv)
 
 	const std::string command_with_orig_bin = std::regex_replace(command, cmd_regex, original_bin_path.string());
 	const std::string command_with_patched_bin = std::regex_replace(command, cmd_regex, original_bin_path.string() + patched_postfix);
+
+	// read in the original binary
+	std::ifstream orig_bin_file(original_bin_path);
+	orig_bin_file.seekg(0, std::ios::end);
+	std::vector<u8> orig_bytes(orig_bin_file.tellg());
+	orig_bin_file.seekg(0, std::ios::beg);
+	orig_bin_file.read((char*)&orig_bytes[0], orig_bytes.size());
+
+	if (orig_bytes.size() < section_address + section_size)
+	{
+		std::cout << "part of the defined section goes outside the bounds of the binary file\n";
+		return 1;
+	}
 
 	// execute the command a few times to figure out the expected runtime
 
@@ -65,15 +86,6 @@ int main(int argc, char** argv)
 	std::cout << "execution time limit: " << expected_execution_time << "ms\n";
 
 
-	std::ifstream orig_bin_file(original_bin_path);
-
-	// read in the original binary
-
-	orig_bin_file.seekg(0, std::ios::end);
-	std::vector<u8> orig_bytes(orig_bin_file.tellg());
-	orig_bin_file.seekg(0, std::ios::beg);
-	orig_bin_file.read((char*)&orig_bytes[0], orig_bytes.size());
-
 	// seed the random number generator
 	std::srand(std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
@@ -81,8 +93,6 @@ int main(int argc, char** argv)
 	constexpr std::array spinner_chars = { '-', '\\', '|', '/' };
 
 	u8 spinner_char_index{0}; // shouldn't matter if this overflows
-
-	constexpr u8 max_bytes_to_change = 8;
 
 	// an infinite loop where we try to make random changes to the binary
 	// and see if things break or not
