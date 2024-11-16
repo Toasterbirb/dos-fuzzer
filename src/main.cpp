@@ -21,18 +21,14 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	constexpr u8 max_bytes_to_change = 8;
 
 	const std::string command						= argv[1];
 	const std::filesystem::path original_bin_path	= argv[2];
 	const u64 section_address						= std::stoul(argv[3], 0, 16);
 	const u64 section_size							= std::stoul(argv[4], 0, 16);
 
-	if (section_size < max_bytes_to_change)
-	{
-		std::cout << "the minimum section size is " << (u32)max_bytes_to_change << " bytes\n";
-		return 1;
-	}
+	constexpr u8 max_bytes_to_change = 8;
+	const u8 bytes_to_change = section_size < max_bytes_to_change ? section_size : max_bytes_to_change;
 
 	const std::filesystem::path patched_bin_path = original_bin_path.string() + patched_postfix;
 
@@ -103,7 +99,7 @@ int main(int argc, char** argv)
 		// this should help with seeing if the program we are testing has frozen
 		std::cout << "\033[2K\r[" << spinner_chars.at(++spinner_char_index % spinner_chars.size()) << ']' << std::flush;
 
-		const u64 byte_count = (std::rand() % (max_bytes_to_change - 1)) + 1;
+		const u64 byte_count = (std::rand() % (bytes_to_change - 1)) + 1;
 		const u64 start_byte = std::rand() % (section_size - byte_count);
 
 		std::vector<u8> patched_bytes = orig_bytes;
