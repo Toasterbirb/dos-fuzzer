@@ -1,3 +1,4 @@
+#include <array>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -76,6 +77,11 @@ int main(int argc, char** argv)
 	// seed the random number generator
 	std::srand(std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
+	// different charcters to use for a loading spinner
+	constexpr std::array spinner_chars = { '-', '\\', '|', '/' };
+
+	u8 spinner_char_index{0}; // shouldn't matter if this overflows
+
 	constexpr u8 max_bytes_to_change = 8;
 
 	// an infinite loop where we try to make random changes to the binary
@@ -83,6 +89,10 @@ int main(int argc, char** argv)
 	std::cout << "fuzzing the binary section at 0x" << std::hex << section_address << std::endl;
 	while (true)
 	{
+		// print a spinner
+		// this should help with seeing if the program we are testing has frozen
+		std::cout << "\033[2K\r[" << spinner_chars.at(++spinner_char_index % spinner_chars.size()) << ']' << std::flush;
+
 		const u64 byte_count = (std::rand() % (max_bytes_to_change - 1)) + 1;
 		const u64 start_byte = std::rand() % (section_size - byte_count);
 
@@ -109,6 +119,9 @@ int main(int argc, char** argv)
 
 		if (elapsed_time > expected_execution_time || ret != 0)
 		{
+			// clear the spinner from the current line
+			std::cout << "\033[2K\r";
+
 			std::cerr << std::hex << "0x" << start_address << " | ";
 			for (u64 i = start_address; i < end_address; ++i)
 				std::fprintf(stderr, "%02x ", patched_bytes.at(i));
