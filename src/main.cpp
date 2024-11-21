@@ -171,7 +171,7 @@ int main(int argc, char** argv)
 			// being tested multiple times
 			//
 			// when there are only 5 bytes left, there cache won't be used at all
-			if (rng < (1.0f / (min_end_address - min_start_address)) * 5.0f)
+			if (rng > std::clamp(((1.0f / (min_end_address - min_start_address)) * 5.0f), 0.0f, 1.0f))
 			{
 				patched_bytes.at(i) = byte_cache.at(i).at(rand() % byte_cache.at(i).size());
 				continue;
