@@ -1,6 +1,7 @@
 #include "args.hpp"
 
 #include <clipp.h>
+#include <format>
 #include <iostream>
 #include <regex>
 
@@ -37,6 +38,9 @@ namespace fuzz
 				clipp::option("-t", "--time").set(o.mode, mode::time)
 				% "if the command execution takes abnormally long, try to find the minimal amount of changes needed to cause the freezing"
 			),
+
+			(clipp::option("-v", "--exec-time-variation") & clipp::number("multiplier").set(o.execution_time_variation_multiplier))
+			% std::format("the highest normal execution time is multiplied with this value to avoid false positives in case the command just happens to take a bit longer to execute sometimes (default: {})", o.execution_time_variation_multiplier),
 
 			clipp::option("-h", "--help").set(print_help) % "print this help page"
 		);

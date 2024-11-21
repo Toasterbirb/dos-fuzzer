@@ -54,8 +54,7 @@ int main(int argc, char** argv)
 
 	// allow for some extra time for the execution in case
 	// the program just happens to take a little bit longer sometimes
-	constexpr f32 execution_time_variation_multiplier = 3;
-	const u64 expected_execution_time = longest_execution_time * execution_time_variation_multiplier;
+	const u64 expected_execution_time = longest_execution_time * opts.execution_time_variation_multiplier;
 	std::cout << "longest normal execution time: " << longest_execution_time << "ms\n";
 	std::cout << "execution time limit: " << expected_execution_time << "ms\n";
 
