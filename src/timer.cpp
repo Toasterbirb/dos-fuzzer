@@ -7,7 +7,7 @@ namespace fuzz
 		start_time = std::chrono::high_resolution_clock::now();
 	}
 
-	u64 timer::elapsed_millis()
+	u64 timer::elapsed_millis() const
 	{
 		const auto current_time = std::chrono::high_resolution_clock::now();
 		const auto duration = std::chrono::duration(current_time - start_time);

@@ -10,7 +10,7 @@ namespace fuzz
 	{
 	public:
 		void start();
-		u64 elapsed_millis();
+		u64 elapsed_millis() const;
 
 	private:
 		std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
