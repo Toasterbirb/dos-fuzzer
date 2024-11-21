@@ -4,7 +4,9 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <map>
 #include <random>
+#include <unordered_map>
 
 #include "args.hpp"
 #include "cmd.hpp"
@@ -66,6 +68,15 @@ int main(int argc, char** argv)
 	// if ret or time modes are used, stop at the first anomaly
 	std::cout << "fuzzing the binary section at 0x" << std::hex << opts.section_address << std::endl;
 
+	// if using something other than the continuous mode, store working bytes
+	// based on their locations into vectors
+	// they will then be randomly tried when looking for better areas
+	//
+	// shouldn't matter if the same byte appears multiple times at the same location
+	// afterall, that just means that that byte should be good at causing trouble
+	// and should be tried more often
+	std::unordered_map<u64, std::vector<u8>> byte_cache;
+
 	// these variables are stored outside the scope of the continuous loop
 	// since they are needed for the refining loop later on if the continuous mode is not used
 	u64 start_address{0};
@@ -105,6 +116,10 @@ int main(int argc, char** argv)
 			// if any other mode than continuous is used, stop right here
 			if (opts.mode != fuzz::mode::continuous && ((time_result && opts.mode == fuzz::mode::time) || (ret_result && opts.mode == fuzz::mode::ret)))
 			{
+				// cache the troublesome bytes
+				for (u64 i = start_address; i < end_address; ++i)
+					byte_cache[i].push_back(patched_bytes.at(i));
+
 				break;
 			}
 		}
@@ -143,7 +158,34 @@ int main(int argc, char** argv)
 
 		// patch the bytes
 		for (u64 i = min_start_address; i < min_end_address; ++i)
+		{
+			const f32 rng = rand() / static_cast<f32>(RAND_MAX);
+
+			// use the cached bytes randomly
+			//
+			// the less bytes there are left, the less the cache should be used
+			// since its faster to iterate through different random combinations
+			//
+			// also if the cache is used heavily with very few bytes left,
+			// there might be a lot of wasted rounds due to the same combination
+			// being tested multiple times
+			//
+			// when there are only 5 bytes left, there cache won't be used at all
+			if (rng < (1.0f / (min_end_address - min_start_address)) * 5.0f)
+			{
+				patched_bytes.at(i) = byte_cache.at(i).at(rand() % byte_cache.at(i).size());
+				continue;
+			}
+
+			// try 00 and FF slightly more often
+			if (rand() % 128 == 0)
+			{
+				patched_bytes.at(i) = rand() % 2 == 0 ? 0x00 : 0xFF;
+				continue;
+			}
+
 			patched_bytes.at(i) = rand() % 255;
+		}
 
 		fuzz::write_bytes(opts.patched_bin_path, patched_bytes);
 		fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_patched_bin, expected_execution_time);
@@ -167,6 +209,10 @@ int main(int argc, char** argv)
 
 			start_address = start_address == min_start_address ? min_start_address - 1 : min_start_address;
 			end_address = end_address == min_end_address ? min_end_address + 1 : min_end_address;
+
+			// cache the bytes at the new area
+			for (u64 i = start_address; i < end_address; ++i)
+				byte_cache[i].push_back(patched_bytes.at(i));
 		}
 	}
 
