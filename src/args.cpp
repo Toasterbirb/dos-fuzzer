@@ -19,7 +19,7 @@ namespace fuzz
 
 		auto cli = (
 			(clipp::option("-c", "--cmd").required(true) & clipp::value("command").set(command))
-			% "the full command that should be run with the patched file, replace the path to the file with %c",
+			% "the full command that should be run with the patched file, substitute the path to the file with %c",
 
 			(clipp::option("-f", "--file").required(true) & clipp::value("file_path").set(o.original_bin_path))
 			% "path to the file that will be used for fuzzing",
