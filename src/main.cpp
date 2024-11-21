@@ -135,8 +135,12 @@ int main(int argc, char** argv)
 		do
 		{
 			min_start_address = start_address + (rand() % (end_address - start_address - 1));
-			min_end_address = end_address - (rand() % (end_address - start_address));
+			min_end_address = end_address - (rand() % (end_address - min_start_address));
 		} while (min_end_address - min_start_address >= min_patch_size && min_end_address > min_start_address);
+
+		assert(min_start_address < patched_bytes.size());
+		assert(min_end_address < patched_bytes.size());
+		assert(min_end_address - min_start_address > 0);
 
 		// patch the bytes
 		for (u64 i = min_start_address; i < min_end_address; ++i)
