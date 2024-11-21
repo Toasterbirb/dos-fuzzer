@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 	const u64 section_address						= std::stoul(argv[3], 0, 16);
 	const u64 section_size							= std::stoul(argv[4], 0, 16);
 
-	constexpr u8 max_bytes_to_change = 8;
+	constexpr u8 max_bytes_to_change = 32;
 	const u8 bytes_to_change = section_size < max_bytes_to_change ? section_size : max_bytes_to_change;
 
 	const std::filesystem::path patched_bin_path = original_bin_path.string() + patched_postfix;
