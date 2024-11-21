@@ -4,44 +4,26 @@
 #include <filesystem>
 #include <iostream>
 #include <random>
-#include <regex>
 
+#include "args.hpp"
 #include "cmd.hpp"
 #include "io.hpp"
 #include "timer.hpp"
 
-constexpr char patched_postfix[] = ".patched";
-
 int main(int argc, char** argv)
 {
-	if (argc != 5)
-	{
-		std::cout << "usage: dos_fuzzer [command] [path_to_binary] [section_address] [section_size]\n"
-			<< "use %c as the placeholder for the binary in the command\n"
-			<< "the section address and size should be the referring to the section to be fuzzed\n";
-		return 1;
-	}
+	// parsing CLI args is done in a separate compilation unit because
+	// clipp and std::regex have horrendous compile times
+	const fuzz::opts opts = fuzz::parse_cli_args(argc, argv);
 
-
-	const std::string command						= argv[1];
-	const std::filesystem::path original_bin_path	= argv[2];
-	const u64 section_address						= std::stoul(argv[3], 0, 16);
-	const u64 section_size							= std::stoul(argv[4], 0, 16);
 
 	constexpr u8 max_bytes_to_change = 32;
-	const u8 bytes_to_change = section_size < max_bytes_to_change ? section_size : max_bytes_to_change;
-
-	const std::filesystem::path patched_bin_path = original_bin_path.string() + patched_postfix;
-
-	const std::regex cmd_regex("%c");
-
-	const std::string command_with_orig_bin = std::regex_replace(command, cmd_regex, original_bin_path.string());
-	const std::string command_with_patched_bin = std::regex_replace(command, cmd_regex, original_bin_path.string() + patched_postfix);
+	const u8 bytes_to_change = opts.section_size < max_bytes_to_change ? opts.section_size : max_bytes_to_change;
 
 	// read in the original binary
-	std::vector<u8> orig_bytes = fuzz::read_bytes(original_bin_path);
+	std::vector<u8> orig_bytes = fuzz::read_bytes(opts.original_bin_path);
 
-	if (orig_bytes.size() < section_address + section_size)
+	if (orig_bytes.size() < opts.section_address + opts.section_size)
 	{
 		std::cout << "part of the defined section goes outside the bounds of the binary file\n";
 		return 1;
@@ -56,7 +38,7 @@ int main(int argc, char** argv)
 	std::cout << "testing normal execution time with " << std::dec << (u32)test_run_count << " runs\n";
 	for (u8 i = 0; i < test_run_count; ++i)
 	{
-		fuzz::cmd_res res = fuzz::run_cmd(command_with_orig_bin);
+		fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_orig_bin);
 
 		if (res.exec_time > longest_execution_time)
 			longest_execution_time = res.exec_time;
@@ -87,7 +69,7 @@ int main(int argc, char** argv)
 
 	// an infinite loop where we try to make random changes to the binary
 	// and see if things break or not
-	std::cout << "fuzzing the binary section at 0x" << std::hex << section_address << std::endl;
+	std::cout << "fuzzing the binary section at 0x" << std::hex << opts.section_address << std::endl;
 	while (true)
 	{
 		// print a spinner
@@ -95,20 +77,20 @@ int main(int argc, char** argv)
 		std::cout << "\033[2K\r[" << spinner_chars.at(++spinner_char_index % spinner_chars.size()) << ']' << std::flush;
 
 		const u64 byte_count = (std::rand() % (bytes_to_change - 1)) + 1;
-		const u64 start_byte = std::rand() % (section_size - byte_count);
+		const u64 start_byte = std::rand() % (opts.section_size - byte_count);
 
 		std::vector<u8> patched_bytes = orig_bytes;
-		const u64 start_address = section_address + start_byte;
-		const u64 end_address = section_address + start_byte + byte_count;
+		const u64 start_address = opts.section_address + start_byte;
+		const u64 end_address = opts.section_address + start_byte + byte_count;
 
 		for (u64 i = start_address; i < end_address; ++i)
 			patched_bytes.at(i) = std::rand() % 255;
 
 		// write the patched binary to disk
-		fuzz::write_bytes(patched_bin_path, patched_bytes);
+		fuzz::write_bytes(opts.patched_bin_path, patched_bytes);
 
 		// attempt to execute the command with the patched binary
-		fuzz::cmd_res res = fuzz::run_cmd(command_with_patched_bin, expected_execution_time);
+		fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_patched_bin, expected_execution_time);
 
 		if (res.exec_time > expected_execution_time || res.return_value != 0)
 		{
