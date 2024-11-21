@@ -7,6 +7,7 @@
 #include <random>
 #include <regex>
 
+#include "cmd.hpp"
 #include "timer.hpp"
 
 constexpr char patched_postfix[] = ".patched";
@@ -59,14 +60,12 @@ int main(int argc, char** argv)
 	std::cout << "testing normal execution time with " << std::dec << (u32)test_run_count << " runs\n";
 	for (u8 i = 0; i < test_run_count; ++i)
 	{
-		t.start();
-		u64 ret = std::system(command_with_orig_bin.c_str());
-		const u64 exec_time = t.elapsed_millis();
+		fuzz::cmd_res res = fuzz::run_cmd(command_with_orig_bin);
 
-		if (exec_time > longest_execution_time)
-			longest_execution_time = exec_time;
+		if (res.exec_time > longest_execution_time)
+			longest_execution_time = res.exec_time;
 
-		if (ret) [[unlikely]]
+		if (res.return_value) [[unlikely]]
 		{
 			std::cout << "error!\n"
 				<< "running the command with the original binary has a non-zero return value\n";
@@ -119,11 +118,9 @@ int main(int argc, char** argv)
 		std::filesystem::permissions(patched_bin_path, std::filesystem::perms::owner_exec, std::filesystem::perm_options::add);
 
 		// attempt to execute the command with the patched binary
-		t.start();
-		u64 ret = std::system(command_with_patched_bin.c_str());
-		const u64 elapsed_time = t.elapsed_millis();
+		fuzz::cmd_res res = fuzz::run_cmd(command_with_patched_bin, expected_execution_time);
 
-		if (elapsed_time > expected_execution_time || ret != 0)
+		if (res.exec_time > expected_execution_time || res.return_value != 0)
 		{
 			// clear the spinner from the current line
 			std::cout << "\033[2K\r";
@@ -134,10 +131,10 @@ int main(int argc, char** argv)
 
 			std::cerr << "| ";
 
-			if (elapsed_time > expected_execution_time)
-				std::cerr << "time (" << std::dec << elapsed_time << "ms) ";
+			if (res.exec_time > expected_execution_time)
+				std::cerr << "time (" << std::dec << res.exec_time << "ms) ";
 
-			if (ret)
+			if (res.return_value != 0)
 				std::cerr << "ret ";
 
 			std::cerr << std::endl;
