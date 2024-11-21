@@ -125,8 +125,8 @@ int main(int argc, char** argv)
 
 		std::vector<u8> patched_bytes = orig_bytes;
 
-		// spam random address ranges until we get something that has less or equal
-		// amount of bytes as the current minimum
+		// spam random address ranges until we get something that has less
+		// bytes than the current minimum
 		//
 		// kind of a naive approach, but it shall do for now
 
@@ -137,7 +137,7 @@ int main(int argc, char** argv)
 		{
 			min_start_address = start_address + (rand() % (end_address - start_address - 1));
 			min_end_address = end_address - (rand() % (end_address - start_address));
-		} while (min_end_address - min_start_address > min_patch_size && min_end_address > min_start_address);
+		} while (min_end_address - min_start_address >= min_patch_size && min_end_address > min_start_address);
 
 		// patch the bytes
 		for (u64 i = min_start_address; i < min_end_address; ++i)
