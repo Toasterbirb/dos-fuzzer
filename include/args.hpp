@@ -21,7 +21,7 @@ namespace fuzz
 		std::string patched_bin_path;
 		u64 section_address;
 		u64 section_size;
-		f32 execution_time_variation_multiplier{3.0f};
+		f32 execution_time_variation_multiplier{5.0f};
 
 		fuzz::mode mode = mode::continuous;
 	};
