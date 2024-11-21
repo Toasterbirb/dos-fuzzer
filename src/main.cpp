@@ -119,6 +119,7 @@ int main(int argc, char** argv)
 	while (min_patch_size > 1)
 	{
 		fuzz::print_spinner();
+		std::cout << " search area: " << end_address - start_address << " bytes" << std::flush;
 
 		std::vector<u8> patched_bytes = orig_bytes;
 
@@ -155,6 +156,17 @@ int main(int argc, char** argv)
 
 			fuzz::print_result(min_start_address, min_end_address - min_start_address, patched_bytes, res);
 			min_patch_size = min_end_address - min_start_address;
+
+			// nudge the search area to the hopefully correct direction by limiting it to
+			// the bytes around the latest result
+			//
+			// basically if the starting point of the found position is equal to the previously
+			// found point, we increase the search radius by one byte to that direction
+			//
+			// same goes for the end address aswell
+
+			start_address = start_address == min_start_address ? min_start_address - 1 : min_start_address;
+			end_address = end_address == min_end_address ? min_end_address + 1 : min_end_address;
 		}
 	}
 
