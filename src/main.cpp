@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 			// clear the spinner from the current line
 			fuzz::clear_cli_line();
 
-			fuzz::print_result(start_address, byte_count, patched_bytes, res, expected_execution_time);
+			fuzz::print_result(start_address, byte_count, patched_bytes, res);
 
 			// if any other mode than continuous is used, stop right here
 			if (opts.mode != fuzz::mode::continuous && ((time_result && opts.mode == fuzz::mode::time) || (ret_result && opts.mode == fuzz::mode::ret)))
@@ -155,7 +155,7 @@ int main(int argc, char** argv)
 		{
 			fuzz::clear_cli_line();
 
-			fuzz::print_result(min_start_address, min_end_address - min_start_address, patched_bytes, res, expected_execution_time);
+			fuzz::print_result(min_start_address, min_end_address - min_start_address, patched_bytes, res);
 			min_patch_size = min_end_address - min_start_address;
 		}
 	}

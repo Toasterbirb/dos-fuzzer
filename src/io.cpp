@@ -51,8 +51,7 @@ namespace fuzz
 		std::cout << "\033[2K\r";
 	}
 
-	void print_result(const u64 address, const u64 byte_count, const std::vector<u8>& bytes,
-			const cmd_res res, const u64 expected_execution_time)
+	void print_result(const u64 address, const u64 byte_count, const std::vector<u8>& bytes, const cmd_res res)
 	{
 		const std::string exec_info_str = std::format("{}{}ms", (res.return_value != 0 ? "ret " : ""), res.exec_time);
 
