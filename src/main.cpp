@@ -32,11 +32,10 @@ int main(int argc, char** argv)
 	// execute the command a few times to figure out the expected runtime
 
 	fuzz::timer t;
-	constexpr u8 test_run_count = 10;
 	u64 longest_execution_time{0};
 
-	std::cout << "testing normal execution time with " << std::dec << (u32)test_run_count << " runs\n";
-	for (u8 i = 0; i < test_run_count; ++i)
+	std::cout << "testing normal execution time with " << std::dec << (u32)opts.test_run_count << " runs\n";
+	for (u8 i = 0; i < opts.test_run_count; ++i)
 	{
 		fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_orig_bin);
 

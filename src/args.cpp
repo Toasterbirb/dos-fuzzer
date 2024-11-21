@@ -39,6 +39,9 @@ namespace fuzz
 				% "if the command execution takes abnormally long, try to find the minimal amount of changes needed to cause the freezing"
 			),
 
+			(clipp::option("-d", "--dry-runs") & clipp::number("count").set(o.test_run_count))
+			% std::format("how many times to run the command normally when deducing the regular execution time (default: {})", o.test_run_count),
+
 			(clipp::option("-v", "--exec-time-variation") & clipp::number("multiplier").set(o.execution_time_variation_multiplier))
 			% std::format("the highest normal execution time is multiplied with this value to avoid false positives in case the command just happens to take a bit longer to execute sometimes (default: {})", o.execution_time_variation_multiplier),
 
