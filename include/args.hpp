@@ -6,6 +6,13 @@
 
 namespace fuzz
 {
+	enum mode
+	{
+		continuous,
+		ret,
+		time
+	};
+
 	struct opts
 	{
 		std::string command_with_orig_bin;
@@ -14,6 +21,8 @@ namespace fuzz
 		std::string patched_bin_path;
 		u64 section_address;
 		u64 section_size;
+
+		fuzz::mode mode = mode::continuous;
 	};
 
 	opts parse_cli_args(const int argc, char** const argv);

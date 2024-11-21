@@ -1,4 +1,5 @@
 #include <array>
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -62,9 +63,17 @@ int main(int argc, char** argv)
 	// seed the random number generator
 	std::srand(std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
-	// an infinite loop where we try to make random changes to the binary
-	// and see if things break or not
+	// if continuous mode is used, loop infinitely and try making different
+	// changes to the binary and see what happens
+	//
+	// if ret or time modes are used, stop at the first anomaly
 	std::cout << "fuzzing the binary section at 0x" << std::hex << opts.section_address << std::endl;
+
+	// these variables are stored outside the scope of the continuous loop
+	// since they are needed for the refining loop later on if the continuous mode is not used
+	u64 start_address{0};
+	u64 end_address{0};
+
 	while (true)
 	{
 		// print a spinner
@@ -75,8 +84,8 @@ int main(int argc, char** argv)
 		const u64 start_byte = std::rand() % (opts.section_size - byte_count);
 
 		std::vector<u8> patched_bytes = orig_bytes;
-		const u64 start_address = opts.section_address + start_byte;
-		const u64 end_address = opts.section_address + start_byte + byte_count;
+		start_address = opts.section_address + start_byte;
+		end_address = opts.section_address + start_byte + byte_count;
 
 		for (u64 i = start_address; i < end_address; ++i)
 			patched_bytes.at(i) = std::rand() % 255;
@@ -87,24 +96,64 @@ int main(int argc, char** argv)
 		// attempt to execute the command with the patched binary
 		fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_patched_bin, expected_execution_time);
 
-		if (res.exec_time > expected_execution_time || res.return_value != 0)
+		const bool time_result = res.exec_time > expected_execution_time;
+		const bool ret_result = res.return_value != 0;
+		if (time_result || ret_result)
 		{
 			// clear the spinner from the current line
 			fuzz::clear_cli_line();
 
-			std::cerr << std::hex << "0x" << start_address << " | ";
-			for (u64 i = start_address; i < end_address; ++i)
-				std::fprintf(stderr, "%02x ", patched_bytes.at(i));
+			fuzz::print_result(start_address, byte_count, patched_bytes, res, expected_execution_time);
 
-			std::cerr << "| ";
+			// if any other mode than continuous is used, stop right here
+			if (opts.mode != fuzz::mode::continuous && ((time_result && opts.mode == fuzz::mode::time) || (ret_result && opts.mode == fuzz::mode::ret)))
+			{
+				break;
+			}
+		}
+	}
 
-			if (res.exec_time > expected_execution_time)
-				std::cerr << "time (" << std::dec << res.exec_time << "ms) ";
+	std::cout << (opts.mode == fuzz::mode::time ? "long execution time" : "non-zero exit code") << " was encountered\n"
+		<< "starting to look for the minimal amount of changes needed for reproduction...\n";
 
-			if (res.return_value != 0)
-				std::cerr << "ret ";
+	// loop until we are down to a singular byte
+	u64 min_patch_size = end_address - start_address;
 
-			std::cerr << std::endl;
+	while (min_patch_size > 1)
+	{
+		fuzz::print_spinner();
+
+		std::vector<u8> patched_bytes = orig_bytes;
+
+		// spam random address ranges until we get something that has less or equal
+		// amount of bytes as the current minimum
+		//
+		// kind of a naive approach, but it shall do for now
+
+		u64 min_start_address;
+		u64 min_end_address;
+
+		do
+		{
+			min_start_address = start_address + (rand() % (end_address - start_address - 1));
+			min_end_address = end_address - (rand() % (end_address - start_address));
+		} while (min_end_address - min_start_address > min_patch_size && min_end_address > min_start_address);
+
+		// patch the bytes
+		for (u64 i = min_start_address; i < min_end_address; ++i)
+			patched_bytes.at(i) = rand() % 255;
+
+		fuzz::write_bytes(opts.patched_bin_path, patched_bytes);
+		fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_patched_bin, expected_execution_time);
+
+		const bool time_result = opts.mode == fuzz::mode::time && res.exec_time > expected_execution_time;
+		const bool ret_result = opts.mode == fuzz::mode::ret && res.return_value != 0;
+		if (time_result || ret_result)
+		{
+			fuzz::clear_cli_line();
+
+			fuzz::print_result(min_start_address, min_end_address - min_start_address, patched_bytes, res, expected_execution_time);
+			min_patch_size = min_end_address - min_start_address;
 		}
 	}
 

@@ -49,4 +49,22 @@ namespace fuzz
 	{
 		std::cout << "\033[2K\r";
 	}
+
+	void print_result(const u64 address, const u64 byte_count, const std::vector<u8>& bytes,
+			const cmd_res res, const u64 expected_execution_time)
+	{
+		std::cerr << std::hex << "0x" << address << " | ";
+		for (u64 i = address; i < address + byte_count; ++i)
+			std::fprintf(stderr, "%02x ", bytes.at(i));
+
+		std::cerr << "| ";
+
+		if (res.exec_time > expected_execution_time)
+			std::cerr << "time (" << std::dec << res.exec_time << "ms) ";
+
+		if (res.return_value != 0)
+			std::cerr << "ret ";
+
+		std::cerr << std::endl;
+	}
 }

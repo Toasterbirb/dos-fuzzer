@@ -30,6 +30,14 @@ namespace fuzz
 			(clipp::option("-s", "--size").required(true) & clipp::value("section_size").set(section_size_str))
 			% "the size of the binary section to fuzz in hexadecimal format",
 
+			clipp::one_of(
+				clipp::option("-r", "--ret").set(o.mode, mode::ret)
+				% "if a non-zero return value is encountered, try to find the minimal amount of changes needed to cause the crash",
+
+				clipp::option("-t", "--time").set(o.mode, mode::time)
+				% "if the command execution takes abnormally long, try to find the minimal amount of changes needed to cause the freezing"
+			),
+
 			clipp::option("-h", "--help").set(print_help) % "print this help page"
 		);
 

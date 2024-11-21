@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cmd.hpp"
 #include "types.hpp"
 
 #include <filesystem>
@@ -11,4 +12,7 @@ namespace fuzz
 	void write_bytes(const std::filesystem::path path, std::vector<u8>& bytes);
 	void print_spinner();
 	void clear_cli_line();
+
+	void print_result(const u64 address, const u64 byte_count, const std::vector<u8>& bytes,
+			const cmd_res res, const u64 expected_execution_time);
 }
