@@ -18,8 +18,7 @@ int main(int argc, char** argv)
 	const fuzz::opts opts = fuzz::parse_cli_args(argc, argv);
 
 
-	constexpr u8 max_bytes_to_change = 32;
-	const u8 bytes_to_change = opts.section_size < max_bytes_to_change ? opts.section_size : max_bytes_to_change;
+	const u8 bytes_to_change = opts.section_size < opts.max_bytes_to_change ? opts.section_size : opts.max_bytes_to_change;
 
 	// read in the original binary
 	std::vector<u8> orig_bytes = fuzz::read_bytes(opts.original_bin_path);

@@ -22,6 +22,7 @@ namespace fuzz
 		u64 section_address;
 		u64 section_size;
 		f32 execution_time_variation_multiplier{5.0f};
+		u64 max_bytes_to_change{32};
 
 		fuzz::mode mode = mode::continuous;
 	};

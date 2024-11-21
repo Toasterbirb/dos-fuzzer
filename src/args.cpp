@@ -42,6 +42,9 @@ namespace fuzz
 			(clipp::option("-v", "--exec-time-variation") & clipp::number("multiplier").set(o.execution_time_variation_multiplier))
 			% std::format("the highest normal execution time is multiplied with this value to avoid false positives in case the command just happens to take a bit longer to execute sometimes (default: {})", o.execution_time_variation_multiplier),
 
+			(clipp::option("-b", "--max-bytes-to-change") & clipp::number("count").set(o.max_bytes_to_change))
+			% std::format("the maximum about of bytes to change when patching the binary; this value will be truncated to the section size if needed (default: {})", o.max_bytes_to_change),
+
 			clipp::option("-h", "--help").set(print_help) % "print this help page"
 		);
 
