@@ -2,12 +2,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <random>
 #include <regex>
 
 #include "cmd.hpp"
+#include "io.hpp"
 #include "timer.hpp"
 
 constexpr char patched_postfix[] = ".patched";
@@ -39,11 +39,7 @@ int main(int argc, char** argv)
 	const std::string command_with_patched_bin = std::regex_replace(command, cmd_regex, original_bin_path.string() + patched_postfix);
 
 	// read in the original binary
-	std::ifstream orig_bin_file(original_bin_path);
-	orig_bin_file.seekg(0, std::ios::end);
-	std::vector<u8> orig_bytes(orig_bin_file.tellg());
-	orig_bin_file.seekg(0, std::ios::beg);
-	orig_bin_file.read((char*)&orig_bytes[0], orig_bytes.size());
+	std::vector<u8> orig_bytes = fuzz::read_bytes(original_bin_path);
 
 	if (orig_bytes.size() < section_address + section_size)
 	{
@@ -108,14 +104,8 @@ int main(int argc, char** argv)
 		for (u64 i = start_address; i < end_address; ++i)
 			patched_bytes.at(i) = std::rand() % 255;
 
-		// remove the previous patched binary if it exists
-		if (std::filesystem::exists(patched_bin_path) && std::filesystem::is_regular_file(patched_bin_path))
-			std::filesystem::remove(patched_bin_path);
-
 		// write the patched binary to disk
-		std::ofstream patched_bin_file(patched_bin_path);
-		patched_bin_file.write((char*)&patched_bytes[0], patched_bytes.size());
-		std::filesystem::permissions(patched_bin_path, std::filesystem::perms::owner_exec, std::filesystem::perm_options::add);
+		fuzz::write_bytes(patched_bin_path, patched_bytes);
 
 		// attempt to execute the command with the patched binary
 		fuzz::cmd_res res = fuzz::run_cmd(command_with_patched_bin, expected_execution_time);
