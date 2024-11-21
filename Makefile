@@ -7,7 +7,7 @@ LDFLAGS=
 
 all: $(BIN)
 
-$(BIN): ./src/main.cpp ./src/timer.cpp
+$(BIN): $(patsubst %.cpp,%.o,$(wildcard ./src/*.cpp))
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 %.o: ./src/%.cpp
@@ -20,6 +20,6 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/$(BIN)
 
 clean:
-	rm -f ./$(BIN) *.o
+	rm -f ./$(BIN) ./src/*.o
 
 .PHONY: clean
