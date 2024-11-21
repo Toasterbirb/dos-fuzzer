@@ -24,7 +24,7 @@ namespace fuzz
 		{
 			while (cmd_future.wait_for(hanging_command_poll_time) != std::future_status::ready)
 			{
-				std::cout << "\rcommand has been hanging for " << std::dec << t.elapsed_millis() / 1000.0f << "s" << std::flush;
+				std::cout << "\033[2K\rcommand has been hanging for " << std::dec << t.elapsed_millis() / 1000.0f << "s" << std::flush;
 			}
 		}
 
