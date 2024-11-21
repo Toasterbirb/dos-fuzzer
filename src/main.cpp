@@ -137,6 +137,12 @@ int main(int argc, char** argv)
 	//
 	// the runtime of the program is very likely to be higher than hashing a string
 	// of a few bytes
+
+	// TODO: take the address of the byte string into account with the hashing
+	//       with the current implementation a small byte string could get hashed
+	//       at a certain location and then that same byte string wouldn't be
+	//       possible to use at a different location
+
 	std::unordered_set<std::string> patched_bytes_cache;
 
 	// loop until we are down to a singular byte
