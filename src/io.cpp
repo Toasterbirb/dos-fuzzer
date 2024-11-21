@@ -1,6 +1,7 @@
 #include "io.hpp"
 
 #include <array>
+#include <format>
 #include <fstream>
 #include <iostream>
 
@@ -53,17 +54,12 @@ namespace fuzz
 	void print_result(const u64 address, const u64 byte_count, const std::vector<u8>& bytes,
 			const cmd_res res, const u64 expected_execution_time)
 	{
-		std::cerr << std::hex << "0x" << address << " | ";
+		const std::string exec_info_str = std::format("{}{}ms", (res.return_value != 0 ? "ret " : ""), res.exec_time);
+
+		std::cerr << std::hex << "0x" << address << " | " << std::left << std::setw(10) << exec_info_str << " | ";
+
 		for (u64 i = address; i < address + byte_count; ++i)
 			std::fprintf(stderr, "%02x ", bytes.at(i));
-
-		std::cerr << "| ";
-
-		if (res.exec_time > expected_execution_time)
-			std::cerr << "time (" << std::dec << res.exec_time << "ms) ";
-
-		if (res.return_value != 0)
-			std::cerr << "ret ";
 
 		std::cerr << std::endl;
 	}

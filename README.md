@@ -7,6 +7,17 @@ Since part of the testing involves parsing possibly corrupted files, the outcome
 ## Usage
 See the output of `dos-fuzzer --help`
 
+### Output format explanation
+Here's one possible line of output:
+```
+0x3756 | ret 5228ms | 3d b9 0b 53 97 a7 8a 8e 48 29 d4 18 e6 5f 98 0d 0d 82 d8 58 02 cd f6
+```
+The first column is the location where the string of bytes would be in the patched binary.
+
+The middle column shows the return result of the execution. If the return value was non-zero, it'll contain the word `ret`. Following it is the execution time measured in milliseconds.
+
+The last column shows an array of bytes that were patched into the binary started from the address shown in the first column.
+
 ## Building
 Build the project with g++ by running `make`. To speed up the build, you can try using the -j flag.
 ```sh
