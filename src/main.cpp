@@ -7,6 +7,7 @@
 #include <map>
 #include <random>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "args.hpp"
 #include "cmd.hpp"
@@ -128,6 +129,16 @@ int main(int argc, char** argv)
 	std::cout << (opts.mode == fuzz::mode::time ? "long execution time" : "non-zero exit code") << " was encountered\n"
 		<< "starting to look for the minimal amount of changes needed for reproduction...\n";
 
+	// cache for holding byte combinations that have already been tried before
+	// to avoid doing duplicate work
+	//
+	// this is needed due to the byte_cache having a high risk of duplicate byte
+	// combinations when the search area becomes smaller
+	//
+	// the runtime of the program is very likely to be higher than hashing a string
+	// of a few bytes
+	std::unordered_set<std::string> patched_bytes_cache;
+
 	// loop until we are down to a singular byte
 	u64 min_patch_size = end_address - start_address;
 
@@ -186,6 +197,19 @@ int main(int argc, char** argv)
 
 			patched_bytes.at(i) = rand() % 255;
 		}
+
+		// copy the bytes into a string and use the unordered_set to hash it and cache it
+		// (assuming that it isn't already in the cache)
+
+		std::string byte_str;
+		std::copy(patched_bytes.begin() + min_start_address, patched_bytes.begin() + min_end_address, std::back_inserter(byte_str));
+
+		// this combination has been tried before and can be skipped
+		if (patched_bytes_cache.contains(byte_str))
+			continue;
+
+		// cache the byte combination
+		patched_bytes_cache.insert(byte_str);
 
 		fuzz::write_bytes(opts.patched_bin_path, patched_bytes);
 		fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_patched_bin, expected_execution_time);
