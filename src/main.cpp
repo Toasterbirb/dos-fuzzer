@@ -242,7 +242,7 @@ int main(int argc, char** argv)
 					continue;
 				}
 
-				patched_bytes.at(i) = rand() % 255;
+				patched_bytes.at(i) = rand() % 256;
 			}
 
 			// copy the bytes into a string and use the unordered_set to hash it and cache it
