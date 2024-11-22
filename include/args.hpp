@@ -24,6 +24,7 @@ namespace fuzz
 		f32 execution_time_variation_multiplier{5.0f};
 		u64 max_bytes_to_change{32};
 		u64 test_run_count{10};
+		u64 seed{0};
 
 		fuzz::mode mode = mode::continuous;
 	};

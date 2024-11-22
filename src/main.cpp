@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 
 
 	// seed the random number generator
-	std::srand(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+	std::srand(opts.seed == 0 ? std::chrono::high_resolution_clock::now().time_since_epoch().count() : opts.seed);
 
 	// if continuous mode is used, loop infinitely and try making different
 	// changes to the binary and see what happens

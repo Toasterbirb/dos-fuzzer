@@ -48,6 +48,9 @@ namespace fuzz
 			(clipp::option("-b", "--max-bytes-to-change") & clipp::number("count").set(o.max_bytes_to_change))
 			% std::format("the maximum about of bytes to change when patching the binary; this value will be truncated to the section size if needed (default: {})", o.max_bytes_to_change),
 
+			(clipp::option("--seed") & clipp::number("seed").set(o.seed))
+			% std::format("value used for seeding the random number generator; if zero, it'll get set to the current time (default: {})", o.seed),
+
 			clipp::option("-h", "--help").set(print_help) % "print this help page"
 		);
 
