@@ -144,6 +144,11 @@ int main(int argc, char** argv)
 	u64 patch_bytes_skip_counter{0};
 	const u64 patch_bytes_skip_count_limit = opts.max_bytes_to_change;
 
+	// how many times we have had to do a loop skip because a singular
+	// byte ran out of combinations
+	u64 single_byte_skip_counter{0};
+	const u64 single_byte_skip_count_limit = opts.max_bytes_to_change;
+
 	// loop until we are down to a singular byte
 	u64 min_patch_size = end_address - start_address;
 
@@ -173,8 +178,15 @@ int main(int argc, char** argv)
 
 		do
 		{
-			min_start_address = start_address + (rand() % (end_address - start_address - 1));
+			// if the single single_byte_skip_counter has reached its limit, stop
+			// generating areas that are only a singular byte in size
+			const u8 min_area_size = (single_byte_skip_counter >= single_byte_skip_count_limit)
+				? 2
+				: 1;
+
+			min_start_address = start_address + (rand() % (end_address - start_address - min_area_size));
 			min_end_address = end_address - (rand() % (end_address - min_start_address));
+
 		} while (min_end_address - min_start_address >= min_patch_size && min_end_address > min_start_address);
 
 		assert(min_start_address < patched_bytes.size());
@@ -266,6 +278,16 @@ int main(int argc, char** argv)
 				}
 
 				++patch_bytes_skip_counter;
+			}
+			else
+			{
+				++single_byte_skip_counter;
+
+				if (single_byte_skip_counter == single_byte_skip_count_limit)
+				{
+					fuzz::clear_cli_line();
+					std::cout << "giving up on finding a 1 byte solution\n";
+				}
 			}
 			continue;
 		}
