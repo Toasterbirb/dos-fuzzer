@@ -11,6 +11,7 @@
 
 #include "args.hpp"
 #include "cmd.hpp"
+#include "counter.hpp"
 #include "io.hpp"
 #include "timer.hpp"
 
@@ -141,13 +142,11 @@ int main(int argc, char** argv)
 	// of a few bytes
 	std::unordered_map<u64, std::unordered_set<std::string>> patched_bytes_cache;
 
-	u64 patch_bytes_skip_counter{0};
-	const u64 patch_bytes_skip_count_limit = opts.max_bytes_to_change;
+	fuzz::counter patch_bytes_skip(opts.max_bytes_to_change);
 
 	// how many times we have had to do a loop skip because a singular
 	// byte ran out of combinations
-	u64 single_byte_skip_counter{0};
-	const u64 single_byte_skip_count_limit = opts.max_bytes_to_change;
+	fuzz::counter single_byte_skip(opts.max_bytes_to_change);
 
 	// loop until we are down to a singular byte
 	u64 min_patch_size = end_address - start_address;
@@ -180,7 +179,7 @@ int main(int argc, char** argv)
 		{
 			// if the single single_byte_skip_counter has reached its limit, stop
 			// generating areas that are only a singular byte in size
-			const u8 min_area_size = (single_byte_skip_counter >= single_byte_skip_count_limit)
+			const u8 min_area_size = single_byte_skip.is_at_limit()
 				? 2
 				: 1;
 
@@ -206,12 +205,11 @@ int main(int argc, char** argv)
 		// at that point the amount of bytes left should be pretty small anyway
 		std::string byte_str;
 
-		u64 patch_bytes_loop_counter{0};
-		constexpr u64 patch_bytes_loop_counter_limit = 100'000;
+		fuzz::counter patch_bytes_loop(100'000);
 
 		do
 		{
-			++patch_bytes_loop_counter;
+			patch_bytes_loop.increment();
 
 			// start with a new byte string on each iteration
 			byte_str.clear();
@@ -231,14 +229,14 @@ int main(int argc, char** argv)
 				// being tested multiple times
 				//
 				// if the patch_bytes_skip_counter has been touched, stop using the cache
-				if (patch_bytes_skip_counter == 0 && rng > (byte_cache_rng_threshold * (min_end_address - min_start_address)))
+				if (patch_bytes_skip.has_incremented() && rng > (byte_cache_rng_threshold * (min_end_address - min_start_address)))
 				{
 					patched_bytes.at(i) = byte_cache.at(i).at(rand() % byte_cache.at(i).size());
 					continue;
 				}
 
 				// try 00 and FF slightly more often if we haven't had to skip a loop yet
-				if (patch_bytes_skip_counter == 0 && rand() % 128 == 0)
+				if (patch_bytes_skip.has_incremented() && rand() % 128 == 0)
 				{
 					patched_bytes.at(i) = rand() % 2 == 0 ? 0x00 : 0xFF;
 					continue;
@@ -251,10 +249,10 @@ int main(int argc, char** argv)
 			// (assuming that it isn't already in the cache)
 
 			std::copy(patched_bytes.begin() + min_start_address, patched_bytes.begin() + min_end_address, std::back_inserter(byte_str));
-		} while (patched_bytes_cache[min_start_address].contains(byte_str) && patch_bytes_loop_counter < patch_bytes_loop_counter_limit);
+		} while (patched_bytes_cache[min_start_address].contains(byte_str) && !patch_bytes_loop.is_at_limit());
 
 		// we have had to loop around too many times, stop searching
-		if (patch_bytes_skip_counter >= patch_bytes_skip_count_limit)
+		if (patch_bytes_skip.is_at_limit())
 		{
 			fuzz::clear_cli_line();
 			std::cout << "cannot come up with new byte combinations anymore in a reasonable amount of time\n"
@@ -262,7 +260,7 @@ int main(int argc, char** argv)
 			break;
 		}
 
-		if (patch_bytes_loop_counter >= patch_bytes_loop_counter_limit)
+		if (patch_bytes_loop.is_at_limit())
 		{
 			// increment the skip counter only if the area we run out of combinations with
 			// was larger than a singular byte
@@ -271,23 +269,23 @@ int main(int argc, char** argv)
 			// takes no effort at all; 2+ bytes should be a different story
 			if (min_end_address - min_start_address > 1)
 			{
-				if (patch_bytes_skip_counter == 0)
+				if (!patch_bytes_skip.has_incremented())
 				{
 					fuzz::clear_cli_line();
 					std::cout << "running out of byte combinations to try\ndisabling byte cache...\n";
 				}
 
-				++patch_bytes_skip_counter;
+				patch_bytes_skip.increment();
 			}
 			else
 			{
-				++single_byte_skip_counter;
-
-				if (single_byte_skip_counter == single_byte_skip_count_limit)
+				if (!single_byte_skip.has_incremented())
 				{
 					fuzz::clear_cli_line();
 					std::cout << "giving up on finding a 1 byte solution\n";
 				}
+
+				single_byte_skip.increment();
 			}
 			continue;
 		}
