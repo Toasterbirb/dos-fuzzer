@@ -312,13 +312,72 @@ int main(int argc, char** argv)
 			// found point, we increase the search radius by one byte to that direction
 			//
 			// same goes for the end address aswell
-
-			start_address = start_address == min_start_address ? min_start_address - 1 : min_start_address;
-			end_address = end_address == min_end_address ? min_end_address + 1 : min_end_address;
+			//
+			// however if there are only 1-2 bytes left, don't make the area
+			// smaller so that it is easier to check for a 1 byte solution
+			if (min_patch_size > 2)
+			{
+				start_address = start_address == min_start_address ? min_start_address - 1 : min_start_address;
+				end_address = end_address == min_end_address ? min_end_address + 1 : min_end_address;
+			}
+			else
+			{
+				start_address = min_start_address;
+				end_address = min_end_address;
+			}
 
 			// cache the bytes at the new area
 			for (u64 i = start_address; i < end_address; ++i)
 				byte_cache[i].push_back(patched_bytes.at(i));
+		}
+	}
+
+	// if we were left with two bytes at the end, try all possible combinations
+	// (that haven't been tried before) to see if there would be a 1 byte solution
+	if (min_patch_size == 2)
+	{
+		std::cout << "trying all possible combinations to find a 1 byte solution\n" << std::flush;
+		std::string byte_str;
+		byte_str.resize(1);
+
+		const auto try_byte = [&opts, &orig_bytes, expected_execution_time](const u64 addr, const u8 byte) -> bool
+		{
+			std::vector<u8> patched_bytes = orig_bytes;
+			patched_bytes.at(addr) = byte;
+			fuzz::write_bytes(opts.patched_bin_path, patched_bytes);
+			fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_patched_bin, expected_execution_time);
+
+			const bool time_result = res.exec_time > expected_execution_time;
+			const bool ret_result = res.return_value != 0;
+
+			if (time_result || ret_result)
+				fuzz::print_result(addr, 1, patched_bytes, res);
+
+			return (time_result && opts.mode == fuzz::mode::time) || (ret_result && opts.mode == fuzz::mode::ret);
+		};
+
+		// brute force both bytes until a solution is found
+		constexpr u8 bytes_to_bruteforce = 2;
+		for (u8 byte = 0; byte < bytes_to_bruteforce; ++byte)
+		{
+			std::cout << "byte[" << std::dec << (i32)byte << "] at 0x" << std::hex << start_address + byte << '\n';
+
+			bool solution_found{false};
+			for (u16 i = 0; i < 256; ++i)
+			{
+				byte_str[0] = i;
+
+				if (patched_bytes_cache[start_address + byte].contains(byte_str))
+					continue;
+
+				solution_found = try_byte(start_address + byte, i);
+
+				if (solution_found)
+					break;
+			}
+
+			if (solution_found)
+				break;
 		}
 	}
 
