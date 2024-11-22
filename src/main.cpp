@@ -137,13 +137,7 @@ int main(int argc, char** argv)
 	//
 	// the runtime of the program is very likely to be higher than hashing a string
 	// of a few bytes
-
-	// TODO: take the address of the byte string into account with the hashing
-	//       with the current implementation a small byte string could get hashed
-	//       at a certain location and then that same byte string wouldn't be
-	//       possible to use at a different location
-
-	std::unordered_set<std::string> patched_bytes_cache;
+	std::unordered_map<u64, std::unordered_set<std::string>> patched_bytes_cache;
 
 	// loop until we are down to a singular byte
 	u64 min_patch_size = end_address - start_address;
@@ -211,11 +205,11 @@ int main(int argc, char** argv)
 		std::copy(patched_bytes.begin() + min_start_address, patched_bytes.begin() + min_end_address, std::back_inserter(byte_str));
 
 		// this combination has been tried before and can be skipped
-		if (patched_bytes_cache.contains(byte_str))
+		if (patched_bytes_cache[min_start_address].contains(byte_str))
 			continue;
 
 		// cache the byte combination
-		patched_bytes_cache.insert(byte_str);
+		patched_bytes_cache[min_start_address].insert(byte_str);
 
 		fuzz::write_bytes(opts.patched_bin_path, patched_bytes);
 		fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_patched_bin, expected_execution_time);
