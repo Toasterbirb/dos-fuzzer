@@ -141,10 +141,22 @@ int main(int argc, char** argv)
 	// of a few bytes
 	std::unordered_map<u64, std::unordered_set<std::string>> patched_bytes_cache;
 
+	u64 patch_bytes_skip_counter{0};
+	const u64 patch_bytes_skip_count_limit = opts.max_bytes_to_change;
+
 	// loop until we are down to a singular byte
 	u64 min_patch_size = end_address - start_address;
 
-	while (min_patch_size > 1)
+	// calculate a multiplier for the byte area size in the patching loop
+	// this should make it so that when the area gets smaller, the cached
+	// bytes are used less and less to favor entirely random bytes
+	//
+	// this should prevent exhausint byte combinations very early on
+	// due to only using cached bytes
+	const f32 byte_cache_rng_threshold = 1.0f / std::clamp(opts.max_bytes_to_change * 2.0f, 4.0f, 64.0f);
+
+
+	while (min_patch_size > 2)
 	{
 		fuzz::print_spinner();
 		std::cout << " search area: " << std::dec << end_address - start_address << " bytes" << std::flush;
@@ -169,46 +181,96 @@ int main(int argc, char** argv)
 		assert(min_end_address < patched_bytes.size());
 		assert(min_end_address - min_start_address > 0);
 
-		// patch the bytes
-		for (u64 i = min_start_address; i < min_end_address; ++i)
+		// loop until a new combination of patches bytes that isn't in the
+		// patched_bytes_cache gets generated
+		//
+		// if a new combination cannot be found within a certain amount of attempts,
+		// loop around to attempt to get an address range that works better
+		//
+		// if this skip has to be done multiple times in a row, we'll stop
+		// the search entirely and call it quits because we can't come up
+		// with new combinations to try with in a reasonable amount of time
+		//
+		// at that point the amount of bytes left should be pretty small anyway
+		std::string byte_str;
+
+		u64 patch_bytes_loop_counter{0};
+		constexpr u64 patch_bytes_loop_counter_limit = 100'000;
+
+		do
 		{
-			const f32 rng = rand() / static_cast<f32>(RAND_MAX);
+			++patch_bytes_loop_counter;
 
-			// use the cached bytes randomly
-			//
-			// the less bytes there are left, the less the cache should be used
-			// since its faster to iterate through different random combinations
-			//
-			// also if the cache is used heavily with very few bytes left,
-			// there might be a lot of wasted rounds due to the same combination
-			// being tested multiple times
-			//
-			// when there are only 5 bytes left, there cache won't be used at all
-			if (rng > std::clamp(((1.0f / (min_end_address - min_start_address)) * 5.0f), 0.0f, 1.0f))
+			// start with a new byte string on each iteration
+			byte_str.clear();
+
+			// patch the bytes
+			for (u64 i = min_start_address; i < min_end_address; ++i)
 			{
-				patched_bytes.at(i) = byte_cache.at(i).at(rand() % byte_cache.at(i).size());
-				continue;
+				const f32 rng = rand() / static_cast<f32>(RAND_MAX);
+
+				// use the cached bytes randomly
+				//
+				// the less bytes there are left, the less the cache should be used
+				// since its faster to iterate through different random combinations
+				//
+				// also if the cache is used heavily with very few bytes left,
+				// there might be a lot of wasted rounds due to the same combination
+				// being tested multiple times
+				//
+				// when there are only 5 bytes left, there cache won't be used at all
+				//
+				// also if the patch_bytes_skip_counter has been touched, stop using the cache
+				if (patch_bytes_skip_counter == 0 && rng > (byte_cache_rng_threshold * (min_end_address - min_start_address)))
+				{
+					patched_bytes.at(i) = byte_cache.at(i).at(rand() % byte_cache.at(i).size());
+					continue;
+				}
+
+				// try 00 and FF slightly more often if we haven't had to skip a loop yet
+				if (patch_bytes_skip_counter == 0 && rand() % 128 == 0)
+				{
+					patched_bytes.at(i) = rand() % 2 == 0 ? 0x00 : 0xFF;
+					continue;
+				}
+
+				patched_bytes.at(i) = rand() % 255;
 			}
 
-			// try 00 and FF slightly more often
-			if (rand() % 128 == 0)
-			{
-				patched_bytes.at(i) = rand() % 2 == 0 ? 0x00 : 0xFF;
-				continue;
-			}
+			// copy the bytes into a string and use the unordered_set to hash it and cache it
+			// (assuming that it isn't already in the cache)
 
-			patched_bytes.at(i) = rand() % 255;
+			std::copy(patched_bytes.begin() + min_start_address, patched_bytes.begin() + min_end_address, std::back_inserter(byte_str));
+		} while (patched_bytes_cache[min_start_address].contains(byte_str) && patch_bytes_loop_counter < patch_bytes_loop_counter_limit);
+
+		// we have had to loop around too many times, stop searching
+		if (patch_bytes_skip_counter >= patch_bytes_skip_count_limit)
+		{
+			fuzz::clear_cli_line();
+			std::cout << "cannot come up with new byte combinations anymore in a reasonable amount of time\n"
+				<< "giving up (╯°□°）╯︵ ┻━┻\n";
+			break;
 		}
 
-		// copy the bytes into a string and use the unordered_set to hash it and cache it
-		// (assuming that it isn't already in the cache)
+		if (patch_bytes_loop_counter >= patch_bytes_loop_counter_limit)
+		{
+			// increment the skip counter only if the area we run out of combinations with
+			// was larger than a singular byte
+			//
+			// one byte only has 256 different combinations and exhasuting that list
+			// takes no effort at all; 2+ bytes should be a different story
+			if (min_end_address - min_start_address > 1)
+			{
+				if (patch_bytes_skip_counter == 0)
+				{
+					fuzz::clear_cli_line();
+					std::cout << "running out of byte combinations to try\ndisabling byte cache...\n";
+				}
 
-		std::string byte_str;
-		std::copy(patched_bytes.begin() + min_start_address, patched_bytes.begin() + min_end_address, std::back_inserter(byte_str));
-
-		// this combination has been tried before and can be skipped
-		if (patched_bytes_cache[min_start_address].contains(byte_str))
+				++patch_bytes_skip_counter;
+			}
 			continue;
+		}
 
 		// cache the byte combination
 		patched_bytes_cache[min_start_address].insert(byte_str);
