@@ -218,9 +218,7 @@ int main(int argc, char** argv)
 				// there might be a lot of wasted rounds due to the same combination
 				// being tested multiple times
 				//
-				// when there are only 5 bytes left, there cache won't be used at all
-				//
-				// also if the patch_bytes_skip_counter has been touched, stop using the cache
+				// if the patch_bytes_skip_counter has been touched, stop using the cache
 				if (patch_bytes_skip_counter == 0 && rng > (byte_cache_rng_threshold * (min_end_address - min_start_address)))
 				{
 					patched_bytes.at(i) = byte_cache.at(i).at(rand() % byte_cache.at(i).size());
