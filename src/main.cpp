@@ -147,7 +147,7 @@ int main(int argc, char** argv)
 	while (min_patch_size > 1)
 	{
 		fuzz::print_spinner();
-		std::cout << " search area: " << end_address - start_address << " bytes" << std::flush;
+		std::cout << " search area: " << std::dec << end_address - start_address << " bytes" << std::flush;
 
 		std::vector<u8> patched_bytes = orig_bytes;
 
