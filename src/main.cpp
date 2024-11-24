@@ -177,7 +177,7 @@ int main(int argc, char** argv)
 
 		do
 		{
-			// if the single single_byte_skip_counter has reached its limit, stop
+			// if the single_byte_skip_counter has reached its limit, stop
 			// generating areas that are only a singular byte in size
 			const u8 min_area_size = single_byte_skip.is_at_limit()
 				? 2
