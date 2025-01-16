@@ -39,6 +39,9 @@ namespace fuzz
 				% "if the command execution takes abnormally long, try to find the minimal amount of changes needed to cause the freezing"
 			),
 
+			(clipp::option("-i", "--ignore-ret") & clipp::numbers("return_value").set(o.ignored_return_values))
+			% "ignore any number of return values (exit codes) that are not considered as crashes or malfunction",
+
 			(clipp::option("-d", "--dry-runs") & clipp::number("count").set(o.test_run_count))
 			% std::format("how many times to run the command normally when deducing the regular execution time (default: {})", o.test_run_count),
 

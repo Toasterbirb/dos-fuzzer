@@ -3,6 +3,7 @@
 #include "types.hpp"
 
 #include <string>
+#include <vector>
 
 namespace fuzz
 {
@@ -25,6 +26,7 @@ namespace fuzz
 		u64 max_bytes_to_change{32};
 		u64 test_run_count{10};
 		u64 seed{0};
+		std::vector<u8> ignored_return_values;
 
 		fuzz::mode mode = mode::continuous;
 	};

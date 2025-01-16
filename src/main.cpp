@@ -86,6 +86,15 @@ int main(int argc, char** argv)
 	u64 start_address{0};
 	u64 end_address{0};
 
+	// helper function for checking if a return value is considered an error or not
+	const auto is_error_return = [&opts](const fuzz::cmd_res res) -> bool
+	{
+		if (opts.ignored_return_values.empty() && res.return_value != 0)
+			return true;
+
+		return std::find(opts.ignored_return_values.begin(), opts.ignored_return_values.end(), res.return_value) != opts.ignored_return_values.end();
+	};
+
 	while (true)
 	{
 		// print a spinner
@@ -109,7 +118,7 @@ int main(int argc, char** argv)
 		fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_patched_bin, expected_execution_time);
 
 		const bool time_result = res.exec_time > expected_execution_time;
-		const bool ret_result = res.return_value != 0;
+		const bool ret_result = is_error_return(res);
 		if (time_result || ret_result)
 		{
 			// clear the spinner from the current line
@@ -297,7 +306,7 @@ int main(int argc, char** argv)
 		fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_patched_bin, expected_execution_time);
 
 		const bool time_result = opts.mode == fuzz::mode::time && res.exec_time > expected_execution_time;
-		const bool ret_result = opts.mode == fuzz::mode::ret && res.return_value != 0;
+		const bool ret_result = opts.mode == fuzz::mode::ret && is_error_return(res);
 		if (time_result || ret_result)
 		{
 			fuzz::clear_cli_line();
@@ -340,7 +349,7 @@ int main(int argc, char** argv)
 		std::string byte_str;
 		byte_str.resize(1);
 
-		const auto try_byte = [&opts, &orig_bytes, expected_execution_time](const u64 addr, const u8 byte) -> bool
+		const auto try_byte = [&opts, &orig_bytes, expected_execution_time, &is_error_return](const u64 addr, const u8 byte) -> bool
 		{
 			std::vector<u8> patched_bytes = orig_bytes;
 			patched_bytes.at(addr) = byte;
@@ -348,7 +357,7 @@ int main(int argc, char** argv)
 			fuzz::cmd_res res = fuzz::run_cmd(opts.command_with_patched_bin, expected_execution_time);
 
 			const bool time_result = res.exec_time > expected_execution_time;
-			const bool ret_result = res.return_value != 0;
+			const bool ret_result = is_error_return(res);
 
 			if (time_result || ret_result)
 				fuzz::print_result(addr, 1, patched_bytes, res);
