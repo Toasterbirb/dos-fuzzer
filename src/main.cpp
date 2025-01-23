@@ -240,7 +240,16 @@ int main(int argc, char** argv)
 				// if the patch_bytes_skip_counter has been touched, stop using the cache
 				if (patch_bytes_skip.has_incremented() && rng > (byte_cache_rng_threshold * (min_end_address - min_start_address)))
 				{
-					patched_bytes.at(i) = byte_cache.at(i).at(rand() % byte_cache.at(i).size());
+					// instead of using the cached bytes directly, use the values around it
+					// to add some more variety
+					//
+					// this might cause an underflow or an overflow, but that shouldn't be a problem
+					//
+					// the cached bytes will be tried multiple times anyway, so the original
+					// value will still see a lot of use
+					const i8 cache_byte_fuzz = (rand() % 7) - 3;
+
+					patched_bytes.at(i) = byte_cache.at(i).at(rand() % byte_cache.at(i).size()) + cache_byte_fuzz;
 					continue;
 				}
 
