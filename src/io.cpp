@@ -28,7 +28,7 @@ namespace fuzz
 
 	void write_bytes(const std::filesystem::path path, std::vector<u8>& bytes)
 	{
-		if (!std::filesystem::is_regular_file(path))
+		if (std::filesystem::exists(path) && !std::filesystem::is_regular_file(path))
 		{
 			std::cout << path << " is a directory and not a file!\n";
 			abort();
