@@ -1,6 +1,7 @@
 #include "args.hpp"
 
 #include <clipp.h>
+#include <filesystem>
 #include <format>
 #include <iostream>
 #include <regex>
@@ -60,6 +61,13 @@ namespace fuzz
 		if (!clipp::parse(argc, argv, cli) || print_help)
 		{
 			std::cout << clipp::make_man_page(cli, "dos-fuzzer");
+			exit(1);
+		}
+
+		// verify that the original file exists to begin with
+		if (!std::filesystem::exists(o.original_bin_path))
+		{
+			std::cout << "the file '" << o.original_bin_path << "' does not exist\n";
 			exit(1);
 		}
 
