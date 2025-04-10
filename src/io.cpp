@@ -1,6 +1,9 @@
 #include "io.hpp"
 
 #include <array>
+#include <cassert>
+#include <cstdlib>
+#include <format>
 #include <format>
 #include <fstream>
 #include <iostream>
@@ -14,9 +17,14 @@ namespace fuzz
 	// shouldn't matter if this overflows
 	u8 spinner_char_index{0};
 
-	std::vector<u8> read_bytes(const std::filesystem::path path)
+	std::vector<u8> read_bytes(const std::filesystem::path& path)
 	{
+		assert(!path.empty());
+
 		std::ifstream file(path);
+		if (!file.good())
+			fatal_error(std::format("could not open file '{}' for reading", path.string()));
+
 		file.seekg(0, std::ios::end);
 
 		std::vector<u8> bytes(file.tellg());
@@ -28,6 +36,8 @@ namespace fuzz
 
 	void write_bytes(const std::filesystem::path path, std::vector<u8>& bytes)
 	{
+		assert(!bytes.empty() && "the patched file ended up being empty");
+
 		if (std::filesystem::exists(path) && !std::filesystem::is_regular_file(path))
 		{
 			std::cout << path << " is a directory and not a file!\n";
@@ -53,6 +63,9 @@ namespace fuzz
 
 	void print_result(const u64 address, const u64 byte_count, const std::vector<u8>& bytes, const cmd_res res)
 	{
+		assert(!bytes.empty());
+		assert(bytes.size() > address);
+
 		const std::string exec_info_str = std::format("{}{}ms", (res.return_value != 0 ? "ret " : ""), res.exec_time);
 
 		std::cerr << std::hex << "0x" << address << " | " << std::left << std::setw(10) << exec_info_str << " | ";
@@ -61,5 +74,11 @@ namespace fuzz
 			std::fprintf(stderr, "%02x ", bytes.at(i));
 
 		std::cerr << std::endl;
+	}
+
+	void fatal_error(const std::string& error_msg)
+	{
+		std::cout << "error: " << error_msg << '\n';
+		abort();
 	}
 }

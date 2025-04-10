@@ -1,4 +1,5 @@
 #include "args.hpp"
+#include "io.hpp"
 
 #include <clipp.h>
 #include <filesystem>
@@ -66,14 +67,26 @@ namespace fuzz
 
 		// verify that the original file exists to begin with
 		if (!std::filesystem::exists(o.original_bin_path))
-		{
-			std::cout << "the file '" << o.original_bin_path << "' does not exist\n";
-			exit(1);
-		}
+			fatal_error(std::format("the file '{}' does not exist", o.original_bin_path));
 
 		// convert the hex strings into numbers
-		o.section_address = std::stoul(section_address_str, 0, 16);
-		o.section_size = std::stoul(section_size_str, 0, 16);
+		try
+		{
+			o.section_address = std::stoul(section_address_str, 0, 16);
+		}
+		catch (const std::exception& e)
+		{
+			fatal_error(std::format("the given section address '{}' is not a valid hex string", section_address_str));
+		}
+
+		try
+		{
+			o.section_size = std::stoul(section_size_str, 0, 16);
+		}
+		catch (const std::exception& e)
+		{
+			fatal_error(std::format("the given section size '{}' is not a valid hex string", section_size_str));
+		}
 
 		// create the different commands
 		const std::regex cmd_regex("%c");
